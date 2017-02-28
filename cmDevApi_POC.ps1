@@ -2,7 +2,7 @@
     Login-AzureRmAccount -SubscriptionName "Windward Software - Platform Credit"
     
     $H = New-Object -TypeName hashtable
-    $H."TestNum" = ""
+    $H."TestNum" = "7"
     $H.RGName = "System5API" + $H.TestNum
 
     $H.VmName = "DevApi" + $H.TestNum
@@ -36,29 +36,60 @@ function create-vm
     $H."Image.Version" = "latest"
     Set-AzureRmVMSourceImage -VM $VM -PublisherName $H.'Image.PublisherName' -Offer $H.'Image.Offer' -Skus $H.'Image.Skus' -Version $H.'Image.Version'
 
-        # Create a subnet
-        $H."Subnet.Name" = $H.VmName + "Subnet"
-        $H."Subnet.AddressPrefix" = "10.0.0.0/24"
+    function Make-Nic
+    {
+        [String]$Subnet = ""
+        [String]$VNet = ""
+        [String]$PublicIp = ""
+        [String]$Nic = ""
+        function Create-Subnet
+        {
+            # $Subnet is used in Create-VNet
+            # Create a subnet
+            $H."Subnet.Name" = $H.VmName + "Subnet"
+            $H."Subnet.AddressPrefix" = "10.0.0.0/24"
 
-        $Subnet = New-AzureRmVirtualNetworkSubnetConfig -Name $H.'Subnet.Name' -AddressPrefix $H.'Subnet.AddressPrefix'
+            $Subnet = New-AzureRmVirtualNetworkSubnetConfig -Name $H.'Subnet.Name' -AddressPrefix $H.'Subnet.AddressPrefix'
+        } # Create-Subnet
+        Create-Subnet
+
+        Start-Sleep $sleep
+        
+        function Create-VNet
+        {
+            # $VNet is used in 
+            # Create a VNet
+            $H."VNet.Name" = $H.VmName + "VNet"
+            $Vnet = New-AzureRmVirtualNetwork -Name $H.'VNet.Name' -ResourceGroupName $H.RGName -Location $H.Location -AddressPrefix $H.'Subnet.AddressPrefix' -Subnet $Subnet
+            Start-Sleep $sleep
+        } # Create-VNet
+        Create-VNet
+
+        function Create-PublicIp
+        {
+            # $PublicIp used in Create-Nic
+            # Create a Public IP
+            $H."PublicIp.Name" = $H.VmName + "PublicIp"
+            $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
+            $PublicIP = New-AzureRmPublicIpAddress -Name $H.'PublicIp.Name' -ResourceGroupName $H.RGName -Location $H.Location -AllocationMethod Dynamic -DomainNameLabel $H.'PublicIp.Name'
+        } # Create-PublicIp
+        Create-PublicIp
+
         Start-Sleep $sleep
 
-        # Create a VNet
-        $H."VNet.Name" = $H.VmName + "VNet"
-        $Vnet = New-AzureRmVirtualNetwork -Name $H.'VNet.Name' -ResourceGroupName $H.RGName -Location $H.Location -AddressPrefix $H.'Subnet.AddressPrefix' -Subnet $Subnet
-        Start-Sleep $sleep
+        Function Create-Nic
+        {
+            # $NIC is used in Add-AzureRmVMNetworkInterface below
+            # Create a NIC
+            $H."Nic.Name" = $H.VmName + "Nic"
+            $NIC = New-AzureRmNetworkInterface -Name $H.'Nic.Name' -ResourceGroupName $H.RGName -Location $H.Location -SubnetId $VNet.Subnets[0].Id -PublicIpAddressId $PublicIP.Id
+        } # Create-Nic
+        Create-Nic
 
-        # Create a Public IP
-        $H."PublicIp.Name" = $H.VmName + "PublicIp"
-        $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
-        $PublicIP = New-AzureRmPublicIpAddress -Name $H.'PublicIp.Name' -ResourceGroupName $H.RGName -Location $H.Location -AllocationMethod Dynamic -DomainNameLabel $H.'PublicIp.Name'
-        Start-Sleep $sleep
-
-        # Create a NIC
-        $H."Nic.Name" = $H.VmName + "Nic"
-        $NIC = New-AzureRmNetworkInterface -Name $H.'Nic.Name' -ResourceGroupName $H.RGName -Location $H.Location -SubnetId $VNet.Subnets[0].Id -PublicIpAddressId $PublicIP.Id
-
-    Add-AzureRmVMNetworkInterface -VM $VM -id $Nic.Id 
+        Add-AzureRmVMNetworkInterface -VM $VM -id $Nic.Id 
+    
+    } # Create-Nic
+    Make-Nic
 
     function Create-OsDisk
     {
@@ -82,6 +113,7 @@ function create-vm
             $StorageAccount = Get-AzureRmStorageAccount -ResourceGroupName $H.RGName -Name $H.'Storage.Name'
             }
         } #Create-StorageAccount
+        Create-StorageAccount
 
         $H."OsDistUri" = $StorageAccount.PrimaryEndpoints.Blob.ToString() + $H.BlobPath
         $H."OsDisk.Name" = $H.VmName + "OsDisk"
@@ -90,8 +122,9 @@ function create-vm
     Create-OsDisk
 
     New-AzureRmVM -VM $VM -ResourceGroupName $H.RGName -Location $H.Location
+    $VM # return the Vm
 } # Create-VM
-create-vm
+$VM = create-vm
 
 
 # Traffic Manager
