@@ -24,6 +24,8 @@
     if ($ASetExists) {$ASet = Get-AzureRmAvailabilitySet -ResourceGroupName $H.RGName -Name $H.ASetName}
     else {$ASet = New-AzureRmAvailabilitySet -ResourceGroupName $h.RGName -Name $H.ASetName -Location $H.Location}
 
+function create-vm
+{
     $VM = New-AzureRmVMConfig -VMName $H.VmName -VMSize $H.VmSize -AvailabilitySetId $ASet.Id
     $Cred = Get-Credential -Message "Enter credentials"
     Set-AzureRmVMOperatingSystem -VM $VM -Windows -ComputerName $H.VmName -Credential $Cred -EnableAutoUpdate -TimeZone "Pacific Standard Time"
@@ -58,30 +60,39 @@
 
     Add-AzureRmVMNetworkInterface -VM $VM -id $Nic.Id 
 
-    $H."BlobPath" = "vhds/" + $H.'VmName' + "OsDisk1.vhd"
-
-        # Create a storage account
-        $H."Storage.Name" = $H.VmName + "StorageAcct"
-        $H.'Storage.Name' = $H.'Storage.Name'.ToLower()
-        $H."Storage.SkuName" = "Premium_LRS" #Standard_LRS
-        #Get-AzureRmStorageAccountNameAvailability $StorageName
-        $goodName = Get-AzureRmStorageAccountNameAvailability $H.'Storage.Name'
-        write-host "$goodName.NameAvailable = """ + $goodName.NameAvailable
-        Start-Sleep 5
-        if ($goodName.NameAvailable)
+    function Create-OsDisk
+    {
+        $H."BlobPath" = "vhds/" + $H.'VmName' + "OsDisk1.vhd"
+        function Create-StorageAccount
         {
-        $StorageAccount = New-AzureRmStorageAccount -ResourceGroupName $H.RGName -Name $H.'Storage.Name' -Kind Storage -Location $H.Location -SkuName $H.'Storage.SkuName'
-        }
-        else
-        {
-        $StorageAccount = Get-AzureRmStorageAccount -ResourceGroupName $H.RGName -Name $H.'Storage.Name'
-        }
+            # Create a storage account
+            $H."Storage.Name" = $H.VmName + "StorageAcct"
+            $H.'Storage.Name' = $H.'Storage.Name'.ToLower()
+            $H."Storage.SkuName" = "Premium_LRS" #Standard_LRS
+            #Get-AzureRmStorageAccountNameAvailability $StorageName
+            $goodName = Get-AzureRmStorageAccountNameAvailability $H.'Storage.Name'
+            write-host "$goodName.NameAvailable = """ + $goodName.NameAvailable
+            Start-Sleep 5
+            if ($goodName.NameAvailable)
+            {
+            $StorageAccount = New-AzureRmStorageAccount -ResourceGroupName $H.RGName -Name $H.'Storage.Name' -Kind Storage -Location $H.Location -SkuName $H.'Storage.SkuName'
+            }
+            else
+            {
+            $StorageAccount = Get-AzureRmStorageAccount -ResourceGroupName $H.RGName -Name $H.'Storage.Name'
+            }
+        } #Create-StorageAccount
 
-    $H."OsDistUri" = $StorageAccount.PrimaryEndpoints.Blob.ToString() + $H.BlobPath
-    $H."OsDisk.Name" = $H.VmName + "OsDisk"
-    $VM = Set-AzureRmVMOSDisk -VM $Vm -Name $H.'OsDisk.Name' -VhdUri $H.OsDistUri -CreateOption FromImage
+        $H."OsDistUri" = $StorageAccount.PrimaryEndpoints.Blob.ToString() + $H.BlobPath
+        $H."OsDisk.Name" = $H.VmName + "OsDisk"
+        $VM = Set-AzureRmVMOSDisk -VM $Vm -Name $H.'OsDisk.Name' -VhdUri $H.OsDistUri -CreateOption FromImage
+    } # Create-OsDisk
+    Create-OsDisk
 
     New-AzureRmVM -VM $VM -ResourceGroupName $H.RGName -Location $H.Location
+} # Create-VM
+create-vm
+
 
 # Traffic Manager
     $H."TrafficManager.Name" = $H.RGName + "TrafficManager"
