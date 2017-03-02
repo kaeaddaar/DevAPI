@@ -5,10 +5,13 @@
     "Image.PublisherName":  "MicrosoftWindowsServer",
     "ResourceGroup.RootName":  "System5API",
     "RootName":  "DevApi",
-    "TestNum":  "14",
+    "TestNum":  "3",
     "Image.Offer":  "WindowsServer",
     "Image.Skus":  "2016-Datacenter",
     "VmSize":  "Standard_F2s",
     "Image.Version":  "latest",
-    "OsDisk.Uri":  ""
+    "OsDisk.Uri":  "",
+    "DataDisk.DiskSizeInGb": "20",
+    "DataDisk.Lun": "0",
+    "DataDisk.Caching": "None"
 }
