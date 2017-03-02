@@ -7,70 +7,96 @@
     
     $HKeys = New-Object System.Collections.ArrayList
     $H = New-Object -TypeName hashtable
+    $JSON = ConvertFrom-Json -InputObject (Get-Content -Path C:\Users\cmackay\Documents\GitHub\DevAPI\Settings.json -Raw)
+    $JSON.psobject.Properties | % {$H.add($_.name, $_.Value)}
 
+    if ($H -eq $null)
+    {
+        # Top Level
+        $H.TestNum = "14"
+        $H.'ResourceGroup.RootName' = "System5Api"
+        $H."RootName" = "DevApi"
+        $H.Location = "westus2"
+    
+        $H.VmSize = "Standard_F2s"
+
+        # Create-Vm
+        $H."Image.PublisherName" = "MicrosoftWindowsServer"
+        $H."Image.Offer" = "WindowsServer"
+        $H."Image.Skus" = "2016-Datacenter"
+        $H."Image.Version" = "latest"
+
+        # Create-SubNet
+        $H."Subnet.AddressPrefix" = "10.0.0.0/24"
+
+        # Create-VNet
+
+        # Create-PublicIp
+
+        # Create-Nic
+
+        # Create-OsDisk
+
+        # Create-StorageAccount
+        $H."Storage.SkuName" = "Premium_LRS" #Standard_LRS
+    
+        # Create-OsDisk
+        $H."OsDisk.Uri" = "" # Set in code as it pulls info from $StorageAccount
+    }
+    $H.VmName = $H.'RootName' + $H.TestNum
+    $H.ASetName = $H.'RootName' + $H.TestNum + "ASet"
+    $H."Subnet.Name" = $H.'RootName' + $H.TestNum + "Subnet"
+    $H."VNet.Name" = $H.'RootName' + $H.TestNum + "VNet" # Depends on .VmName
+
+    $H."PublicIp.Name" = $H.'RootName' + $H.TestNum + "PublicIp"
+    $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
+    $H."Nic.Name" = $H.'RootName' + $H.TestNum + "Nic"
+    $H."BlobPath" = "vhds/" + $H.'RootName' + $H.TestNum + "OsDisk1.vhd"
+    $H."Storage.Name" = $H.'RootName' + $H.TestNum + "StorageAcct"
+    $H.'Storage.Name' = $H.'Storage.Name'.ToLower()
+    $H."OsDisk.Name" = $H.'RootName' + $H.TestNum + "OsDisk" # Depends on .RootName and .TestNum
+
+    $H.'ResourceGroup.Name' = $H.'ResourceGroup.RootName' + $H.TestNum
     # Top Level
     $X = foreach ($item in @("ResourceGroup.Name", "RGName", "TestNum", "RootName", "VmName", "Location", "VmSize", "ASetName")) {$HKeys.add($item)} # Global Hash Keys
-    $H."TestNum" = "14"
-    $H.RGName = "System5API" + $H.TestNum
-    $H.'ResourceGroup.Name' = $H.RGName
     $ResourceGroup_Name = $H.'ResourceGroup.Name'
     $TestNum = $H.TestNum
 
-    $H."RootName" = "DevApi"
     $RootName = $H.RootName
-    $H.VmName = $H.'RootName' + $H.TestNum
-    $H.Location = "westus2"
     $Location = $H.Location
     $VmName = $H.VmName
     
-    $H.VmSize = "Standard_F2s"
-    $H.ASetName = $H.'RootName' + $H.TestNum + "ASet"
     $VmSize = $H.VmSize
     $ASetName = $H.ASetName
 
     # Create-Vm
-    $H."Image.PublisherName" = "MicrosoftWindowsServer"
-    $H."Image.Offer" = "WindowsServer"
-    $H."Image.Skus" = "2016-Datacenter"
-    $H."Image.Version" = "latest"
     $Image_PublisherName = $H.'Image.PublisherName'
     $Image_Offer = $H.'Image.Offer'
     $Image_Skus = $H.'Image.Skus'
     $Image_Version = $H.'Image.Version'
 
     # Create-SubNet
-    $H."Subnet.Name" = $H.'RootName' + $H.TestNum + "Subnet"
-    $H."Subnet.AddressPrefix" = "10.0.0.0/24"
     $Subnet_Name = $H.'Subnet.Name'
     $Subnet_AddressPrefix = $H.'Subnet.AddressPrefix'
 
     # Create-VNet
-    $H."VNet.Name" = $H.'RootName' + $H.TestNum + "VNet" # Depends on .VmName
     $VNetName = $H.'VNet.Name'
 
     # Create-PublicIp
-    $H."PublicIp.Name" = $H.'RootName' + $H.TestNum + "PublicIp"
-    $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
     $PublicIp_Name = $H.'PublicIp.Name'
+    $PublicIp = New-Object Microsoft.Azure.Commands.Network.Models.PSPublicIpAddress
 
     # Create-Nic
-    $H."Nic.Name" = $H.'RootName' + $H.TestNum + "Nic"
     $Nic_Name = $H.'Nic.Name'
 
     # Create-OsDisk
-    $H."BlobPath" = "vhds/" + $H.'RootName' + $H.TestNum + "OsDisk1.vhd"
     $BlobPath = $H.BlobPath
 
     # Create-StorageAccount
-    $H."Storage.Name" = $H.'RootName' + $H.TestNum + "StorageAcct"
-    $H.'Storage.Name' = $H.'Storage.Name'.ToLower()
-    $H."Storage.SkuName" = "Premium_LRS" #Standard_LRS
     $Storage_Name = $H.'Storage.Name'
     $Storage_SkuName = $H.'Storage.SkuName'
     
     # Create-OsDisk
-    $H."OsDisk.Uri" = "" # Set in code as it pulls info from $StorageAccount
-    $H."OsDisk.Name" = $H.'RootName' + $H.TestNum + "OsDisk" # Depends on .RootName and .TestNum
     $OsDisk_Uri = $H.'OsDisk.Uri'
     $OsDisk_Name = $H.'OsDisk.Name'
 
@@ -88,7 +114,7 @@
 
     [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = New-Object Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine
 
-function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageAccount, $VNet_Name, $Subnet_Name, $Subnet_AddressPrefix, $ResourceGroup_Name, $Location, $VmName, $VmSize, $Nic_Name, $OsDisk_Uri, $OsDisk_Name, $AutomationAccount_Name, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM )
+function create-vm ([switch]$Verbose, $Subnet, $VNet, [ref]$PublicIp, $Nic, $StorageAccount, $VNet_Name, $Subnet_Name, $Subnet_AddressPrefix, $ResourceGroup_Name, $Location, $VmName, $VmSize, $Nic_Name, $OsDisk_Uri, $OsDisk_Name, $AutomationAccount_Name, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM )
 {
     #Global Inputs: $VM
     $VM = New-AzureRmVMConfig -VMName $VmName -VMSize $VmSize -AvailabilitySetId $ASet.Id
@@ -107,7 +133,7 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
 #>
     [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Set-AzureRmVMSourceImage -VM $VM -PublisherName $Image_PublisherName -Offer $Image_Offer -Skus $Image_Skus -Version $Image_Version
 
-    function Make-Nic ($Subnet, $VNet, $PublicIp, $Nic, $Subnet_Name, $Subnet_AddressPrefix, $VNet_Name, $ResourceGroup_Name, $Location, $Nic_Name, [Switch]$Verbose, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM)
+    function Make-Nic ($Subnet, $VNet, [ref]$PublicIp, $Nic, $Subnet_Name, $Subnet_AddressPrefix, $VNet_Name, $ResourceGroup_Name, $Location, $Nic_Name, [Switch]$Verbose, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM)
     {
         function Create-Subnet ($Subnet_Name, $Subnet_AddressPrefix, [Switch]$Verbose)
         {
@@ -144,7 +170,7 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
             -VNet_Name $VNet_Name -Verbose
         #Catch {write-host "Create-VNet failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
-        function Create-PublicIp ($ResourceGroup_Name, $Location, [Switch]$Verbose)
+        function Create-PublicIp ($ResourceGroup_Name, $Location, [Switch]$Verbose, [ref]$PublicIp)
         {
             # $PublicIp used in Create-Nic
             $X = foreach ($item in @("PublicIp.Name")) {$HKeys.add($item)} # Global Hash Keys
@@ -153,11 +179,11 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
             $H."PublicIp.Name" = $H.VmName + "PublicIp"
             $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
         #>
-            $PublicIP = New-AzureRmPublicIpAddress -Name $PublicIp_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -AllocationMethod Dynamic -DomainNameLabel $PublicIp_Name
-            $PublicIP
+            ([ref]$PublicIp) = New-AzureRmPublicIpAddress -Name $PublicIp_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -AllocationMethod Dynamic -DomainNameLabel $PublicIp_Name
+            $PublicIp.Value
         } # Create-PublicIp
         if ($true) {write-host "Create-PublicIp"}
-        $PublicIp = Create-PublicIp -ResourceGroup_Name $ResourceGroup_Name -Location $Location -Verbose
+        $PublicIp = Create-PublicIp -ResourceGroup_Name $ResourceGroup_Name -Location $Location -Verbose -PublicIp ([ref]$PublicIp)
         #Catch {write-host "Create-PublicIp failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
         Start-Sleep $sleep
@@ -170,7 +196,7 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
         <#
             $H."Nic.Name" = $H.VmName + "Nic"
         #>
-            $Nic = New-AzureRmNetworkInterface -Name $Nic_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -SubnetId $VNet.Subnets[0].Id -PublicIpAddressId $PublicIP.Id 
+            $Nic = New-AzureRmNetworkInterface -Name $Nic_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -SubnetId $VNet.Subnets[0].Id -PublicIpAddressId $PublicIP.Value.Id 
             $Nic
         } # Create-Nic
         if ($true) {write-host "Create-Nic"}
@@ -179,9 +205,10 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
 
         [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Add-AzureRmVMNetworkInterface -VM $VM -id $Nic.Id
         $VM
+        
     } # Make-Nic
     if ($true) {Write-Host "Make-Nic"}
-    [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Make-Nic -Subnet $Subnet -VNet $VNet -PublicIp $PublicIp -Nic $Nic -Subnet_Name $Subnet_Name -Subnet_AddressPrefix $Subnet_AddressPrefix `
+    [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Make-Nic -Subnet $Subnet -VNet $VNet -PublicIp ([ref]$PublicIp) -Nic $Nic -Subnet_Name $Subnet_Name -Subnet_AddressPrefix $Subnet_AddressPrefix `
         -ResourceGroup_Name $ResourceGroup_Name -Location $Location -VNet_Name $VNet_Name -Nic_Name $Nic_Name -Verbose -VM $VM
 #    Catch {write-host "Make-Nic failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
@@ -232,30 +259,35 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, $PublicIp, $Nic, $StorageA
 
     write-host "Press C to Cancel before creating a VM"
     if (read-host -eq "C") {break}
-    [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = New-AzureRmVM -VM $VM -ResourceGroupName $ResourceGroup_Name -Location $Location
+    New-AzureRmVM -VM $VM -ResourceGroupName $ResourceGroup_Name -Location $Location
     $VM
 } # Create-VM
 if ($true) {write-host "Create-Vm"}
-[Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = create-vm -Verbose -Subnet $Subnet -VNet $VNet -PublicIp $PublicIP -Nic $Nic -Subnet_Name $Subnet_Name -VNet_Name $VNetName -Subnet_AddressPrefix $Subnet_AddressPrefix `
+$VMR = create-vm -Verbose -Subnet $Subnet -VNet $VNet -PublicIp ([ref]$PublicIP) -Nic $Nic -Subnet_Name $Subnet_Name -VNet_Name $VNetName -Subnet_AddressPrefix $Subnet_AddressPrefix `
     -ResourceGroup_Name $ResourceGroup_Name -Location $Location -VmName $VmName -VmSize $VmSize -Nic_Name $Nic_Name -AutomationAccount_Name $AutomationAccount_Name `
     -OsDisk_Uri $OsDisk_Uri -OsDisk_Name $OsDisk_Name -VM $VM
 #Catch {write-host "Create-Vm failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
-
+$VM = get-azurermvm -ResourceGroupName $ResourceGroup_Name -Name $VmName
 # Traffic Manager
     $H."TrafficManager.Name" = $H.RGName + "TrafficManager"
     $H.'TrafficManager.Name' = $H.'TrafficManager.Name'.Replace("_","")
-    $TrafficManagerProfile = New-AzureRmTrafficManagerProfile -Name $H.'TrafficManager.Name' -ResourceGroupName $H.RGName -ProfileStatus Enabled -RelativeDnsName $H.'TrafficManager.Name' -Ttl 30 -TrafficRoutingMethod Performance -MonitorProtocol HTTP -MonitorPath "/" -MonitorPort 80
+
+    $TrafficManagerProfile = Get-AzureRmTrafficManagerProfile | where {$_.Name -eq $H.'TrafficManager.Name'}
+    if($TrafficManagerProfile -eq $null){ $TrafficManagerProfile = New-AzureRmTrafficManagerProfile -Name $H.'TrafficManager.Name' -ResourceGroupName $H.RGName -ProfileStatus Enabled -RelativeDnsName $H.'TrafficManager.Name' -Ttl 30 -TrafficRoutingMethod Performance -MonitorProtocol HTTP -MonitorPath "/" -MonitorPort 80}
+
     $H."TrafficManagerEndpoint.Name" = $H.'RootName' + $H.TestNum + "TmEndpoint"
 #    $H."TrafficManagerEndpoint.Id" = "/subscriptions/7261fdd2-889c-491b-8657-1ff32e1cac4b/resourceGroups/DevAPI_Test/providers/Microsoft.Network/networkInterfaces/DevAPINic"
-    $H."TrafficManagerEndpoint.Id" = TrafficManagerProfile.Id
+    $H."TrafficManagerEndpoint.Id" = $TrafficManagerProfile.Id
 
-    New-AzureRmTrafficManagerEndpoint -Name $H.'TrafficManagerEndpoint.Name' -ProfileName $H.'TrafficManager.Name' -ResourceGroupName $H.RGName -Type AzureEndpoints -TargetResourceId $PublicIP.Id -EndpointStatus Enabled
+    $PublicIp = Get-AzureRmPublicIpAddress -Name $PublicIp_Name -ResourceGroupName $ResourceGroup_Name
+    New-AzureRmTrafficManagerEndpoint -Name $H.'TrafficManagerEndpoint.Name' -ProfileName $H.'TrafficManager.Name' -ResourceGroupName $H.RGName `
+        -Type AzureEndpoints -TargetResourceId $PublicIP.Id -EndpointStatus Enabled
 
 # Attach the data disks
 
     $H."VhdUri.BlobPath" = "vhds/" + $H.'RootName' + $H.TestNum + "DataDisk1.vhd"
-    $H."Storage.Name" = $H.'RootName' + $H.TestNum + "testdatastorage"
+    $H."Storage.Name" = $H.'RootName' + $H.TestNum + "datastorage"
     $H."Storage.Name" = $H.'Storage.Name'.tolower() # Required to have in lower case
     
     #$DataStorage = Get-AzureRmStorageAccount -ResourceGroupName $H.'RgName' -Name $H.'Storage.Name'
@@ -263,9 +295,13 @@ if ($true) {write-host "Create-Vm"}
     $H.'VhdUri.Name' = $H.'VhdUri.Name'.ToLower()
     #$H.'VhdUri.Name' = "cmtestabc"
     #$DataStorage = New-AzureRmStorageAccount -ResourceGroupName $H.'RGName' -SkuName "Premium_LRS" -Name $H."Storage.Name" -Location $H.Location -Kind "BlobStorage" -AccessTier "Hot"
-    $DataStorage = New-AzureRmStorageAccount -ResourceGroupName $H.'RGName' -SkuName "Premium_LRS" -Name $H."Storage.Name" -Location $H.Location -Kind Storage
+    $DataStorage = Get-AzureRmStorageAccount -ResourceGroupName $ResourceGroup_Name -Name $Storage_Name
+    if ($dataStorage -eq $null) { $DataStorage = New-AzureRmStorageAccount -ResourceGroupName $H.'RGName' -SkuName "Premium_LRS" -Name $H."Storage.Name" -Location $H.Location -Kind Storage }
 
     $H."VhdUri" = $DataStorage.PrimaryEndpoints.Blob.ToString() + $H.'VhdUri.BlobPath'
+
     Add-AzureRmVMDataDisk -VM $VM -Name $H.'VhdUri.Name' -VhdUri $H.VhdUri -CreateOption Empty -DiskSizeInGB 20 -Lun 0 -Caching None
     #Update-AzureRmVM -VM $VM -ResourceGroupName $H.RGName
     # the above worked, but I had lun and cashing parameters set, where previous attempts didn't have those set.
+    
+    Update-AzureRmVM -VM $VM -ResourceGroupName $ResourceGroup_Name
