@@ -13,5 +13,8 @@
     "OsDisk.Uri":  "",
     "DataDisk.DiskSizeInGb": "20",
     "DataDisk.Lun": "0",
-    "DataDisk.Caching": "None"
+    "DataDisk.Caching": "None",
+    "SubscriptionName": "VSE MPN",
+    "SubscriptionName1": "VSE MPN",
+    "SubscriptionName2": "Windward Software - Platform Credit"
 }
