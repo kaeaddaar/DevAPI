@@ -8,37 +8,85 @@ Get-Command -Module Create-Vm
 
 # ----- load Other variables ----- start
 $HKeys = New-Object System.Collections.ArrayList
-$H = New-Object -TypeName hashtable
 $Sleep = 2
 $PublicIp = New-Object Microsoft.Azure.Commands.Network.Models.PSPublicIpAddress
 # ----- load Other variables ----- end
 
 
 # ----- Load Variables ----- start
-$JSON = ConvertFrom-Json -InputObject (Get-Content -Path C:\Users\cmackay\Documents\GitHub\DevAPI\Settings.json -Raw)
-$JSON.psobject.Properties | % {$H.add($_.name, $_.Value)}
+<#
+.Synopsis
+   Get a hash table from a JSON settings file
+.DESCRIPTION
+   Get a hash table from a JSON settings file. If you pass in the $Hash parameter it will add that hash to the settings hash making a combined has.
+.EXAMPLE
+$Hash = @{"var1"="val1"; "var2"="Val2"}
+$H1 = get-HashFromJson -Hash $Hash -SettingsPath .\Settings_Environment.json
+$H1 = get-HashFromJson -Hash $H1 -SettingsPath .\Settings.json
+$H1
 
-if ($H -eq $null) # if we haven't loaded the hash table from a JSON settings file then use these defaults
+# Results:
+Name                           Value                                                                                                                                                                                                     
+----                           -----                                                                                                                                                                                                     
+DataDisk.DiskSizeInGb          20                                                                                                                                                                                                        
+var2                           Val2                                                                                                                                                                                                      
+OsDisk.Uri                                                                                                                                                                                                                               
+Image.Skus                     2016-Datacenter                                                                                                                                                                                           
+TestNum                        3                                                                                                                                                                                                         
+Image.PublisherName            MicrosoftWindowsServer                                                                                                                                                                                    
+Image.Version                  latest                                                                                                                                                                                                    
+RootName                       DevApi                                                                                                                                                                                                    
+ResourceGroup.RootName         System5API                                                                                                                                                                                                
+var1                           val1                                                                                                                                                                                                      
+Image.Offer                    WindowsServer                                                                                                                                                                                             
+Storage.SkuName                Premium_LRS                                                                                                                                                                                               
+DataDisk.Caching               None                                                                                                                                                                                                      
+SubscriptionName1              VSE MPN                                                                                                                                                                                                   
+DataDisk.Lun                   0                                                                                                                                                                                                         
+VmSize                         Standard_F2s                                                                                                                                                                                              
+SubscriptionName2              Windward Software - Platform Credit                                                                                                                                                                       
+Location                       westus2                                                                                                                                                                                                   
+Subnet.AddressPrefix           10.0.0.0/24                                                                                                                                                                                               
+SubscriptionName               VSE MPN                                                                                                                                                                                                   
+
+# Notice that Var1, and var2 from $Hash are loaded, as well as the SubscriptioName variables from .\Settings_Environment.json
+
+#>
+
+
+function get-HashFromJson ([hashtable]$Hash, [string]$SettingsPath = ".\Settings.json")
 {
-    $H.TestNum = "1"
-    $H."ResourceGroup.RootName" = "System5Api"
-    $H."RootName" = "DevApi"
-    $H."Location" = "westus2"
+    $H = New-Object -TypeName hashtable
+    if ($Hash -ne $null) { $Hash.Keys | % {$H.Add($_, $Hash.Item($_))} }
 
-    $H."VmSize" = "Standard_F2s"
-    $H."Image.PublisherName" = "MicrosoftWindowsServer"
-    $H."Image.Offer" = "WindowsServer"
-    $H."Image.Skus" = "2016-Datacenter"
-    $H."Image.Version" = "latest"
-    $H."Subnet.AddressPrefix" = "10.0.0.0/24"
-    $H."Storage.SkuName" = "Standard_LRS" #Premium_LRS
-    $H."OsDisk.Uri" = "" # Set in code as it pulls info from $StorageAccount
-    $H."DataDisk.DiskSizeInGb" = "20"
-    $H."DataDisk.Lun" = "0"
-    $H."DataDisk.Caching" = "None"
-    $H."SubscriptionName" = "Windward Software - Platform Credit"
-}
-#Load variables from settings / JSON
+    $JSON = ConvertFrom-Json -InputObject (Get-Content -Path $SettingsPath -Raw)
+    $JSON.psobject.Properties | % {$H.add($_.name, $_.Value)}
+
+    if ($H -eq $null) # if we haven't loaded the hash table from a JSON settings file then use these defaults
+    {
+        $H.TestNum = "1"
+        $H."ResourceGroup.RootName" = "System5Api"
+        $H."RootName" = "DevApi"
+        $H."Location" = "westus2"
+
+        $H."VmSize" = "Standard_F2s"
+        $H."Image.PublisherName" = "MicrosoftWindowsServer"
+        $H."Image.Offer" = "WindowsServer"
+        $H."Image.Skus" = "2016-Datacenter"
+        $H."Image.Version" = "latest"
+        $H."Subnet.AddressPrefix" = "10.0.0.0/24"
+        $H."Storage.SkuName" = "Standard_LRS" #Premium_LRS
+        $H."OsDisk.Uri" = "" # Set in code as it pulls info from $StorageAccount
+        $H."DataDisk.DiskSizeInGb" = "20"
+        $H."DataDisk.Lun" = "0"
+        $H."DataDisk.Caching" = "None"
+        $H."SubscriptionName" = "Windward Software - Platform Credit"
+    }
+    $H # return the hashtable
+} # get-HashFromJson
+# ----- Load Variables ----- end
+    
+# ----- declare variables from settings hash -----
 $TestNum = $H.TestNum
 $ResourceGroup_RootName = $H."ResourceGroup.RootName"
 $RootName = $H."RootName"
@@ -56,7 +104,6 @@ $DataDisk_DiskSizeInGb = $H."DataDisk.DiskSizeInGb"
 $DataDisk_Lun = $H."DataDisk.Lun"
 $DataDisk_Caching = $H."DataDisk.Caching"
 $SubscriptionName = $H."SubscriptionName"
-# ----- Load Variables ----- end
 
 # ----- load calculated variables ----- start
 $ResourceGroup_Name = $ResourceGroup_RootName + $TestNum

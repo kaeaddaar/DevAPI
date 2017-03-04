@@ -154,3 +154,75 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, [ref]$PublicIp, $Nic, $Sto
     New-AzureRmVM -VM $VM -ResourceGroupName $ResourceGroup_Name -Location $Location
     $VM
 } # Create-VM
+
+
+# ----- Load Variables ----- start
+<#
+.Synopsis
+   Get a hash table from a JSON settings file
+.DESCRIPTION
+   Get a hash table from a JSON settings file. If you pass in the $Hash parameter it will add that hash to the settings hash making a combined has.
+.EXAMPLE
+$Hash = @{"var1"="val1"; "var2"="Val2"}
+$H1 = get-HashFromJson -Hash $Hash -SettingsPath .\Settings_Environment.json
+$H1 = get-HashFromJson -Hash $H1 -SettingsPath .\Settings.json
+$H1
+
+# Results:
+Name                           Value                                                                                                                                                                                                     
+----                           -----                                                                                                                                                                                                     
+DataDisk.DiskSizeInGb          20                                                                                                                                                                                                        
+var2                           Val2                                                                                                                                                                                                      
+OsDisk.Uri                                                                                                                                                                                                                               
+Image.Skus                     2016-Datacenter                                                                                                                                                                                           
+TestNum                        3                                                                                                                                                                                                         
+Image.PublisherName            MicrosoftWindowsServer                                                                                                                                                                                    
+Image.Version                  latest                                                                                                                                                                                                    
+RootName                       DevApi                                                                                                                                                                                                    
+ResourceGroup.RootName         System5API                                                                                                                                                                                                
+var1                           val1                                                                                                                                                                                                      
+Image.Offer                    WindowsServer                                                                                                                                                                                             
+Storage.SkuName                Premium_LRS                                                                                                                                                                                               
+DataDisk.Caching               None                                                                                                                                                                                                      
+SubscriptionName1              VSE MPN                                                                                                                                                                                                   
+DataDisk.Lun                   0                                                                                                                                                                                                         
+VmSize                         Standard_F2s                                                                                                                                                                                              
+SubscriptionName2              Windward Software - Platform Credit                                                                                                                                                                       
+Location                       westus2                                                                                                                                                                                                   
+Subnet.AddressPrefix           10.0.0.0/24                                                                                                                                                                                               
+SubscriptionName               VSE MPN                                                                                                                                                                                                   
+
+# Notice that Var1, and var2 from $Hash are loaded, as well as the SubscriptioName variables from .\Settings_Environment.json
+
+#>
+function get-HashFromJson ([hashtable]$Hash, [string]$SettingsPath = ".\Settings.json")
+{
+    $H = New-Object -TypeName hashtable
+    if ($Hash -ne $null) { $Hash.Keys | % {$H.Add($_, $Hash.Item($_))} }
+
+    $JSON = ConvertFrom-Json -InputObject (Get-Content -Path $SettingsPath -Raw)
+    $JSON.psobject.Properties | % {$H.add($_.name, $_.Value)}
+
+    if ($H -eq $null) # if we haven't loaded the hash table from a JSON settings file then use these defaults
+    {
+        $H.TestNum = "1"
+        $H."ResourceGroup.RootName" = "System5Api"
+        $H."RootName" = "DevApi"
+        $H."Location" = "westus2"
+
+        $H."VmSize" = "Standard_F2s"
+        $H."Image.PublisherName" = "MicrosoftWindowsServer"
+        $H."Image.Offer" = "WindowsServer"
+        $H."Image.Skus" = "2016-Datacenter"
+        $H."Image.Version" = "latest"
+        $H."Subnet.AddressPrefix" = "10.0.0.0/24"
+        $H."Storage.SkuName" = "Standard_LRS" #Premium_LRS
+        $H."OsDisk.Uri" = "" # Set in code as it pulls info from $StorageAccount
+        $H."DataDisk.DiskSizeInGb" = "20"
+        $H."DataDisk.Lun" = "0"
+        $H."DataDisk.Caching" = "None"
+        $H."SubscriptionName" = "Windward Software - Platform Credit"
+    }
+    $H # return the hashtable
+} # get-HashFromJson
+# ----- Load Variables ----- end
