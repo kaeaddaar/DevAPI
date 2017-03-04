@@ -52,8 +52,6 @@ SubscriptionName               VSE MPN
 # Notice that Var1, and var2 from $Hash are loaded, as well as the SubscriptioName variables from .\Settings_Environment.json
 
 #>
-
-
 function get-HashFromJson ([hashtable]$Hash, [string]$SettingsPath = ".\Settings.json")
 {
     $H = New-Object -TypeName hashtable
@@ -85,7 +83,7 @@ function get-HashFromJson ([hashtable]$Hash, [string]$SettingsPath = ".\Settings
     $H # return the hashtable
 } # get-HashFromJson
 # ----- Load Variables ----- end
-    
+
 # ----- declare variables from settings hash -----
 $TestNum = $H.TestNum
 $ResourceGroup_RootName = $H."ResourceGroup.RootName"
