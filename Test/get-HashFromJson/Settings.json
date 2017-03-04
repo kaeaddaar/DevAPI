@@ -1,0 +1,17 @@
+{
+    "Location":  "westus2",
+    "Storage.SkuName":  "Premium_LRS",
+    "Subnet.AddressPrefix":  "10.0.0.0/24",
+    "Image.PublisherName":  "MicrosoftWindowsServer",
+    "ResourceGroup.RootName":  "System5API",
+    "RootName":  "DevApi",
+    "TestNum":  "3",
+    "Image.Offer":  "WindowsServer",
+    "Image.Skus":  "2016-Datacenter",
+    "VmSize":  "Standard_F2s",
+    "Image.Version":  "latest",
+    "OsDisk.Uri":  "",
+    "DataDisk.DiskSizeInGb": "20",
+    "DataDisk.Lun": "0",
+    "DataDisk.Caching": "None"
+}
