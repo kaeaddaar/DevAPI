@@ -21,3 +21,5 @@ $H2.psobject.Properties | % {if ($_.Value -ne $H1.psobject.Properties.Item($_.Na
 
 Write-Output "If no fail messages, then test was a success"
 
+#2017-03-06(cm) Need to add three new config items to the test.
+#Maybe consider 
