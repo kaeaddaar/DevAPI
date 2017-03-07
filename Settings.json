@@ -5,7 +5,7 @@
     "Image.PublisherName":  "MicrosoftWindowsServer",
     "ResourceGroup.RootName":  "System5API",
     "RootName":  "DevApi",
-    "TestNum":  "5",
+    "TestNum":  "7",
     "Image.Offer":  "WindowsServer",
     "Image.Skus":  "2016-Datacenter",
     "VmSize":  "Standard_F2s",
