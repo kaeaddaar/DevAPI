@@ -7,7 +7,6 @@
 
 # ----- starting -----
 cd $PSScriptRoot # set the current directory to the directory of this script
-#Remove-Module .\Create-vm.psm1
 Import-Module .\Create-Vm.psm1
 get-command -Module Create-Vm
 
