@@ -5,7 +5,7 @@
     "Image.PublisherName":  "MicrosoftWindowsServer",
     "ResourceGroup.RootName":  "System5API",
     "RootName":  "DevApi",
-    "TestNum":  "7",
+    "TestNum":  "3",
     "Image.Offer":  "WindowsServer",
     "Image.Skus":  "2016-Datacenter",
     "VmSize":  "Standard_F2s",
@@ -13,8 +13,5 @@
     "OsDisk.Uri":  "",
     "DataDisk.DiskSizeInGb": "20",
     "DataDisk.Lun": "0",
-    "DataDisk.Caching": "None",
-    "StorageAccount.Kind": "Storage",
-    "DataDisk.CreationOption": "Empty",
-    "StorageAccount.SkuName": "Premium_LRS"
+    "DataDisk.Caching": "None"
 }
