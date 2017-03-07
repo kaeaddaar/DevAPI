@@ -1,6 +1,6 @@
 ﻿
 # ----- functions -----
-function Make-Nic ($Subnet, $VNet, [ref]$PublicIp, $Nic, $Subnet_Name, $Subnet_AddressPrefix, $VNet_Name, $ResourceGroup_Name, $Location, $Nic_Name, [Switch]$Verbose, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM)
+function Make-Nic ($Subnet, $VNet, $Nic, $Subnet_Name, $Subnet_AddressPrefix, $VNet_Name, $ResourceGroup_Name, $Location, $Nic_Name, [Switch]$Verbose, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM)
 {
     if ($true) {write-host "Create-Subnet"}
     $Subnet = Create-Subnet -Subnet_Name $Subnet_Name -Subnet_AddressPrefix $Subnet_AddressPrefix -Verbose
@@ -14,7 +14,7 @@ function Make-Nic ($Subnet, $VNet, [ref]$PublicIp, $Nic, $Subnet_Name, $Subnet_A
     #Catch {write-host "Create-VNet failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
     if ($true) {write-host "Create-PublicIp"}
-    $PublicIp = Create-PublicIp -ResourceGroup_Name $ResourceGroup_Name -Location $Location -Verbose -PublicIp ([ref]$PublicIp)
+    $PublicIp = Create-PublicIp -ResourceGroup_Name $ResourceGroup_Name -Location $Location -Verbose
     #Catch {write-host "Create-PublicIp failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
     Start-Sleep $sleep
@@ -55,7 +55,7 @@ function Create-VNet ($ResourceGroup_Name, $Location, $Subnet_AddressPrefix, $VN
 } # Create-VNet
 
 
-function Create-PublicIp ($ResourceGroup_Name, $Location, [Switch]$Verbose, [ref]$PublicIp)
+function Create-PublicIp ($ResourceGroup_Name, $Location, [Switch]$Verbose)
 {
     # $PublicIp used in Create-Nic
     # Create a Public IP
@@ -63,8 +63,8 @@ function Create-PublicIp ($ResourceGroup_Name, $Location, [Switch]$Verbose, [ref
     $H."PublicIp.Name" = $H.VmName + "PublicIp"
     $H.'PublicIp.Name' = $h.'PublicIp.Name'.ToLower()
 #>
-    ([ref]$PublicIp) = New-AzureRmPublicIpAddress -Name $PublicIp_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -AllocationMethod Dynamic -DomainNameLabel $PublicIp_Name
-    $PublicIp.Value
+    $PublicIp = New-AzureRmPublicIpAddress -Name $PublicIp_Name -ResourceGroupName $ResourceGroup_Name -Location $Location -AllocationMethod Dynamic -DomainNameLabel $PublicIp_Name
+    $PublicIp
 } # Create-PublicIp
 
 Function Create-Nic ($ResourceGroup_Name, $Location, $PublicIp, $Nic_Name, $VNet, $Nic, [Switch]$Verbose)
@@ -121,7 +121,7 @@ function Create-StorageAccount ($Storage_Name, $Storage_SkuName, $StorageAccount
 } #Create-StorageAccount
 
 
-function create-vm ([switch]$Verbose, $Subnet, $VNet, [ref]$PublicIp, $Nic, $StorageAccount, $VNet_Name, $Subnet_Name, $Subnet_AddressPrefix, `
+function create-vm ([switch]$Verbose, $Subnet, $VNet, $Nic, $StorageAccount, $VNet_Name, $Subnet_Name, $Subnet_AddressPrefix, `
     $ResourceGroup_Name, $Location, $VmName, $VmSize, $Nic_Name, $OsDisk_Uri, $OsDisk_Name, $AutomationAccount_Name, [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM )
 {
     #Global Inputs: $VM
@@ -140,7 +140,7 @@ function create-vm ([switch]$Verbose, $Subnet, $VNet, [ref]$PublicIp, $Nic, $Sto
     [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Set-AzureRmVMSourceImage -VM $VM -PublisherName $Image_PublisherName -Offer $Image_Offer -Skus $Image_Skus -Version $Image_Version
 
     if ($true) {Write-Host "Make-Nic"}
-    [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Make-Nic -Subnet $Subnet -VNet $VNet -PublicIp ([ref]$PublicIp) -Nic $Nic -Subnet_Name $Subnet_Name -Subnet_AddressPrefix $Subnet_AddressPrefix `
+    [Microsoft.Azure.Commands.Compute.Models.PSVirtualMachine]$VM = Make-Nic -Subnet $Subnet -VNet $VNet -Nic $Nic -Subnet_Name $Subnet_Name -Subnet_AddressPrefix $Subnet_AddressPrefix `
         -ResourceGroup_Name $ResourceGroup_Name -Location $Location -VNet_Name $VNet_Name -Nic_Name $Nic_Name -Verbose -VM $VM
 #    Catch {write-host "Make-Nic failed, breaking" +  $error[0].Exception + $error[0].FullyQualifiedErrorId; break}
 
@@ -226,3 +226,46 @@ function get-HashFromJson ([hashtable]$Hash, [string]$SettingsPath = ".\Settings
     $H # return the hashtable
 } # get-HashFromJson
 # ----- Load Variables ----- end
+
+
+# ----- Add data storage ----- start
+<#
+.Synopsis
+   Add data storage after VM has been created
+.DESCRIPTION
+   This code works after VM is already created
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+.INPUTS
+   $VM is the Virtual Machine data disk is being added to
+   $ResourceGroup_Name is the resource group the VM and Data disks are in
+   $Location is the geo location the disk will be created in. Ex: westus2
+   $VhsUri_BlobPath is the blobpath. Put together using this structure: "vhds/" + $RootName + $TestNum + "OsDisk1.vhd"
+   $DataDisk_DiskSizeInGb is the size in GB that the Data disk will be
+   $DataDisk_Caching is the caching setting. Ex: None
+   $Kind_Def is the Kind setting on the disk. Ex: "Storage"
+   $CreationOption_Def is the creation option of the disk. Ex: "Empty"
+   $SkuName_Def is the SkuName of the storage.Ex: "Premium_LRS"
+.OUTPUTS
+   Returns the VM
+#>
+function Add-DataDisk_PostVmCreation ($VM, $ResourceGroup_Name, $Storage_Name, $Location, $VhdUri_BlobPath, $DataDisk_DiskSizeInGb, $DataDisk_Caching, `
+    $StorageAccount_Kind, $DataDisk_CreationOption, $StorageAccount_SkuName)
+{
+    $DataStorage = Get-AzureRmStorageAccount -ResourceGroupName $ResourceGroup_Name -Name $Storage_Name
+    if ($dataStorage -eq $null) { $DataStorage = New-AzureRmStorageAccount -ResourceGroupName $ResourceGroup_Name -SkuName $StorageAccount_SkuName -Name $Storage_Name `
+        -Location $Location -Kind $StorageAccount_Kind }
+
+    $VhdUri = $DataStorage.PrimaryEndpoints.Blob.ToString() + $VhdUri_BlobPath
+
+    Add-AzureRmVMDataDisk -VM $VM -Name $VhdUri_Name -VhdUri $VhdUri -CreateOption $DataDisk_CreationOption -DiskSizeInGB $DataDisk_DiskSizeInGb -Lun $DataDisk_Lun -Caching $DataDisk_Caching
+    # the above worked, but I had lun and cashing parameters set, where previous attempts didn't have those set.
+    
+    Update-AzureRmVM -VM $VM -ResourceGroupName $ResourceGroup_Name
+    $VM
+}
+# ----- Add data storage ----- end
+
+
